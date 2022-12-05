@@ -1,0 +1,636 @@
+---
+title: "TP2_LIME"
+output: html_document
+date: "2022-12-05"
+---
+
+## Setup
+
+```{r}
+# install.packages("keras")
+# install.packages("lime")
+# system('add-apt-repository -y ppa:cran/imagemagick')
+# system('apt-get update')
+# system("apt-get install libmagick++-dev")
+# install.packages("magick")
+# install.packages('abind')
+```
+
+```{r}
+library(keras)
+library(lime)   
+library(magick) 
+library(ggplot2)
+library(abind)
+library(dplyr)
+```
+
+## utils
+
+```{r}
+to_df <- function(explanation){
+  explanation_df <- data.frame(model_type = explanation$model_type,
+                              case = explanation$case,
+                              label = explanation$label,
+                              label_prob = explanation$label_prob,
+                              model_r2 = explanation$model_r2,
+                              model_intercept = explanation$model_intercept,
+                              model_prediction = explanation$model_prediction,
+                              feature = explanation$feature,
+                              feature_value = NA,
+                              feature_weight = explanation$feature_weight,
+                              feature_desc = explanation$feature_desc,
+                              data = NA,
+                              prediction = NA,
+                              stringsAsFactors = FALSE)
+
+  ## this will coerce superpixel_list and bitmap_list to list, but still works for plotting
+  for (i in 1:nrow(explanation_df)){
+    explanation_df$feature_value[i] <- explanation$feature_value[i]
+    explanation_df$data[i] <- explanation$data[i]
+    explanation_df$prediction[i] <- explanation$prediction[i]
+  }
+  return(explanation_df)
+}
+
+image_prep <- function(x) {
+  arrays <- lapply(x, function(path) {
+    img <- image_load(path, target_size = c(224,224))
+    x <- image_to_array(img)
+    x <- array_reshape(x, c(1, dim(x)))
+    x <- imagenet_preprocess_input(x)
+  })
+  do.call(abind::abind, c(arrays, list(along = 1)))
+}
+```
+
+## Modelos
+
+```{r}
+model_vgg16 <- application_vgg16(weights = "imagenet", include_top = TRUE)
+model_resnet50 <- application_resnet50(weights = "imagenet", include_top = TRUE)
+model_labels <- readRDS(system.file('extdata', 'imagenet_labels.rds', package = 'lime'))
+```
+
+## Explainers
+
+```{r}
+explainer_vgg16 <- lime(c('flower_0269.jpg'), as_classifier(model_vgg16, model_labels), image_prep)
+
+explainer_resnet50 <- lime(c('flower_0269.jpg'), as_classifier(model_resnet50, model_labels), image_prep)
+```
+
+## object explanation
+
+```{r}
+expl_flower_0269 <- lime::explain(c('flower_0269.jpg'), explainer_vgg16, 
+                       n_labels = 1, 
+                       n_features = 10,
+                       n_superpixels = 50, weight = 1,
+                       n_permutations = 100,
+                       background = "white"
+                       )
+```
+
+```{r}
+#plot_image_explanation(expl_flower_0269)
+```
+
+```{r}
+#expl_flower_0269[1,]
+```
+
+```{r}
+class(expl_flower_0269)
+```
+
+```{r}
+expl_template <- .load_image_example()
+class(expl_template)
+```
+
+```{r}
+expl_template
+```
+
+```{r}
+colnames(expl_flower_0269)
+```
+
+```{r}
+explanations <- lime::explain(c('flower_0269.jpg','motorbike_0032.jpg'), explainer_vgg16, 
+                       n_labels = 5, 
+                       n_features = 10,
+                       n_superpixels = 50, weight = 1,
+                       n_permutations = 200,
+                       background = "white"
+                       )
+
+to_df(explanations) %>%
+  ggplot(aes(x = feature_weight)) +
+    facet_wrap(~ case + label, scales = "free") +
+    geom_density()
+```
+
+## Resultados
+
+### Moto
+
+```{r}
+#Imagen original a clasificar
+print(image_read('motorbike_0032.jpg'))
+```
+
+```{r}
+#Visualizamos los superpixels obtenidos de la imagen
+plot_superpixels('motorbike_0032.jpg', n_superpixels = 50, weight = 5)
+```
+
+#### VGG16
+
+```{r}
+#Clasificacion de la imagen segun el modelo VGG16
+res_vgg16_motorbike <- predict(model_vgg16, image_prep(c('motorbike_0032.jpg')))
+imagenet_decode_predictions(res_vgg16_motorbike)
+```
+
+```{r}
+#Explain
+explanation <- lime::explain(c('motorbike_0032.jpg'), explainer_vgg16, 
+                       n_labels = 1, 
+                       n_features = 100,
+                       n_superpixels = 100, weight = 10,
+                       n_permutations = 500,
+                       background = "white")
+```
+
+```{r}
+plot_image_explanation(
+to_df(explanation),
+which = 1,
+threshold = 0.02,
+show_negative = TRUE,
+display = "outline", #"outline"
+fill_alpha = 0.3,
+outline_col = c("blue", "red"),
+block_col = "grey"
+)
+```
+
+```{r}
+plot_features(explanation, ncol = 3, cases = NULL)
+```
+
+```{r}
+explanation %>%
+  ggplot(aes(x = feature_weight)) +
+    facet_wrap(~ case, scales = "free") +
+    geom_density()
+```
+
+```{r}
+plot_image_explanation(
+  to_df(explanation),
+  which = 1,
+  threshold = 0.02,
+  show_negative = FALSE,
+  display = "block", #"outline"
+  fill_alpha = 0.3,
+  outline_col = c("blue", "red"),
+  block_col = "grey"
+  )
+```
+
+#### RESNET50
+
+```{r}
+explanation <- lime::explain(c('motorbike_0032.jpg'), explainer_resnet50, 
+                       n_labels = 1, 
+                       n_features = 50,
+                       n_superpixels = 50, weight = 10,
+                       n_permutations = 500,
+                       background = "white")
+```
+
+```{r}
+plot_image_explanation(
+  to_df(explanation),
+  which = 1,
+  threshold = 0.02,
+  show_negative = TRUE,
+  display = "outline", #"outline"
+  fill_alpha = 0.3,
+  outline_col = c("blue", "red"),
+  block_col = "grey"
+  )
+```
+
+```{r}
+plot_features(explanation, ncol = 3, cases = NULL)
+```
+
+```{r}
+plot_image_explanation(
+to_df(explanation),
+which = 1,
+threshold = 0.02,
+show_negative = FALSE,
+display = "block", #"outline"
+fill_alpha = 0.3,
+outline_col = c("blue", "red"),
+block_col = "grey"
+)
+```
+
+### Flor
+
+```{r}
+#Imagen original a clasificar
+plot(image_read('flower_0269.jpg'))
+```
+
+```{r}
+#Visualizamos los superpixels obtenidos de la imagen
+plot_superpixels('flower_0269.jpg', n_superpixels = 50, weight = 10)
+```
+
+#### VGG16
+
+```{r}
+res_vgg16_flower <- predict(model_vgg16, image_prep(c('flower_0269.jpg')))
+imagenet_decode_predictions(res_vgg16_flower)
+```
+
+```{r}
+explanation <- lime::explain(c('flower_0269.jpg'), explainer_vgg16, 
+                       n_labels = 1, 
+                       n_features = 50,
+                       n_superpixels = 50, weight = 10,
+                       n_permutations = 500,
+                       background = "white")
+```
+
+```{r}
+plot_image_explanation(
+  to_df(explanation),
+  which = 1,
+  threshold = 0.02,
+  show_negative = TRUE,
+  display = "outline", #"outline"
+  fill_alpha = 0.3,
+  outline_col = c("blue", "red"),
+  block_col = "grey"
+  )
+```
+
+```{r}
+plot_features(explanation, ncol = 3, cases = NULL)
+```
+
+```{r}
+explanation %>%
+  ggplot(aes(x = feature_weight)) +
+    facet_wrap(~ case, scales = "free") +
+    geom_density()
+```
+
+```{r}
+plot_image_explanation(
+  to_df(explanation),
+  which = 1,
+  threshold = 0.02,
+  show_negative = FALSE,
+  display = "block", #"outline"
+  fill_alpha = 0.3,
+  outline_col = c("blue", "red"),
+  block_col = "grey"
+  )
+```
+
+#### RESNET50
+
+```{r}
+res_resnet50_flower <- predict(model_resnet50, image_prep(c('flower_0269.jpg')))
+imagenet_decode_predictions(res_resnet50_flower)
+```
+
+```{r}
+explanation <- lime::explain(c('flower_0269.jpg'), explainer_resnet50, 
+                       n_labels = 1, 
+                       n_features = 50,
+                       n_superpixels = 50, weight = 10,
+                       n_permutations = 500,
+                       background = "white")
+```
+
+```{r}
+plot_image_explanation(
+  to_df(explanation),
+  which = 1,
+  threshold = 0.02,
+  show_negative = TRUE,
+  display = "outline", #"outline"
+  fill_alpha = 0.3,
+  outline_col = c("blue", "red"),
+  block_col = "grey"
+  )
+```
+
+```{r}
+plot_image_explanation(
+  to_df(explanation),
+  which = 1,
+  threshold = 0.02,
+  show_negative = FALSE,
+  display = "block", #"outline"
+  fill_alpha = 0.3,
+  outline_col = c("blue", "red"),
+  block_col = "grey"
+  )
+```
+
+### Perro
+
+```{r}
+#Imagen original a clasificar
+plot(image_read('dog_0170.jpg'))
+
+```
+
+```{r}
+#Visualizamos los superpixels obtenidos de la imagen
+plot_superpixels('dog_0170.jpg', n_superpixels = 50, weight = 10)
+```
+
+#### VGG16
+
+```{r}
+#Clasificacion de la imagen segun el modelo VGG16
+res_vgg16_dog <- predict(model_vgg16, image_prep(c('dog_0170.jpg')))
+imagenet_decode_predictions(res_vgg16_dog)
+```
+
+```{r}
+explanation <- lime::explain(c('dog_0170.jpg'), explainer_vgg16, 
+                       n_labels = 1, 
+                       n_features = 50,
+                       n_superpixels = 50, weight = 10,
+                       n_permutations = 500,
+                       background = "white")
+```
+
+```{r}
+plot_image_explanation(
+  to_df(explanation),
+  which = 1,
+  threshold = 0.02,
+  show_negative = TRUE,
+  display = "outline", #"outline"
+  fill_alpha = 0.3,
+  outline_col = c("blue", "red"),
+  block_col = "grey"
+  )
+```
+
+#### RESNET50
+
+```{r}
+#Clasificacion de la imagen segun el modelo VGG16
+res_resnet50_dog <- predict(model_resnet50, image_prep(c('dog_0170.jpg')))
+imagenet_decode_predictions(res_resnet50_dog)
+```
+
+```{r}
+explanation <- lime::explain(c('dog_0170.jpg'), explainer_resnet50, 
+                       n_labels = 1, 
+                       n_features = 50,
+                       n_superpixels = 50, weight = 10,
+                       n_permutations = 500,
+                       background = "white")
+```
+
+```{r}
+plot_image_explanation(
+  to_df(explanation),
+  which = 1,
+  threshold = 0.02,
+  show_negative = TRUE,
+  display = "outline", #"outline"
+  fill_alpha = 0.3,
+  outline_col = c("blue", "red"),
+  block_col = "grey"
+  )
+```
+
+#### Evaluación
+
+```{r}
+expl_flower_0269_vgg16 <- lime::explain(c('flower_0269.jpg'), explainer_vgg16, 
+                       n_labels = 1, 
+                       n_features = 10,
+                       n_superpixels = 50, weight = 1,
+                       n_permutations = 200,
+                       background = "white"
+                       )
+
+expl_motorbike_0032_vgg16 <- lime::explain(c('motorbike_0032.jpg'), explainer_vgg16, 
+                       n_labels = 1, 
+                       n_features = 10,
+                       n_superpixels = 50, weight = 1,
+                       n_permutations = 200,
+                       background = "white"
+                       )
+
+expl_dog_0170_vgg16 <- lime::explain(c('dog_0170.jpg'), explainer_vgg16, 
+                       n_labels = 1, 
+                       n_features = 10,
+                       n_superpixels = 50, weight = 1,
+                       n_permutations = 200,
+                       background = "white"
+                       )
+
+expl_flower_0269_resnet50 <- lime::explain(c('flower_0269.jpg'), explainer_resnet50, 
+                       n_labels = 1, 
+                       n_features = 10,
+                       n_superpixels = 50, weight = 1,
+                       n_permutations = 200,
+                       background = "white"
+                       )
+
+expl_motorbike_0032_resnet50 <- lime::explain(c('motorbike_0032.jpg'), explainer_resnet50, 
+                      n_labels = 1, 
+                      n_features = 10,
+                      n_superpixels = 50, weight = 1,
+                      n_permutations = 200,
+                      background = "white"
+                      )
+
+expl_dog_0170_resnet50 <- lime::explain(c('dog_0170.jpg'), explainer_resnet50, 
+                       n_labels = 1, 
+                       n_features = 10,
+                       n_superpixels = 50, weight = 1,
+                       n_permutations = 200,
+                       background = "white"
+                       )
+
+explanations = c(expl_flower_0269_vgg16, expl_flower_0269_resnet50, expl_motorbike_0032_vgg16, expl_motorbike_0032_resnet50, expl_dog_0170_vgg16, expl_dog_0170_resnet50)
+explanations_vgg16 <- c(expl_flower_0269_vgg16, expl_motorbike_0032_vgg16, expl_dog_0170_vgg16)
+explanations_resnet50 <- c(expl_flower_0269_resnet50, expl_motorbike_0032_resnet50, expl_dog_0170_resnet50)
+```
+
+```{r}
+for (explanation in explanations){
+  p <- to_df(explanations) %>%
+    ggplot(aes(x = feature_weight)) +
+      facet_wrap(~ case + label, scales = "free") +
+      geom_density()
+  print(p)
+}
+```
+
+```{r}
+plot_image_explanation(
+  to_df(expl_motorbike_0032_vgg16),
+  which = 1,
+  threshold = 0.0,
+  display = "outline", #"outline"
+  fill_alpha = 0.3,
+  outline_col = c("blue", "red")
+  )
+```
+
+```{r}
+plot_image_explanation(to_df(expl_motorbike_0032_vgg16), display='block', block_col = "white", threshold=0.02)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_motorbike_0032_vgg16), display='block', block_col = "white", threshold=0.015)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_motorbike_0032_vgg16), display='block', block_col = "white", threshold=0.01)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_flower_0269_vgg16), display='block', block_col = "white", threshold=0.03)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_flower_0269_vgg16), display='block', block_col = "white", threshold=0.02)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_flower_0269_vgg16), display='block', block_col = "white", threshold=0.015)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_flower_0269_vgg16), display='block', block_col = "white", threshold=0.005)
+```
+
+```{r}
+plot_features(to_df(expl_dog_0170_vgg16))
+```
+
+```{r}
+plot_image_explanation(to_df(expl_dog_0170_vgg16), display='block', block_col = "white", threshold=0.03)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_dog_0170_vgg16), display='block', block_col = "white", threshold=0.02)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_dog_0170_vgg16), display='block', block_col = "white", threshold=0.015)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_dog_0170_resnet50), display='block', block_col = "white", threshold=0.01)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_dog_0170_resnet50), display='block', block_col = "white", threshold=0.005)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_dog_0170_resnet50), display='outline', outline_col = c("green","red"), threshold=0.005)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_motorbike_0032_resnet50), display='block', block_col = "white", threshold=0.02)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_motorbike_0032_resnet50), display='block', block_col = "white", threshold=0.015)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_motorbike_0032_resnet50), display='block', block_col = "white", threshold=0.01)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_flower_0269_resnet50), display='block', block_col = "white", threshold=0.06)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_flower_0269_resnet50), display='block', block_col = "white", threshold=0.02)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_flower_0269_resnet50), display='block', block_col = "white", threshold=0.015)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_flower_0269_resnet50), display='block', block_col = "white", threshold=0.01)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_flower_0269_resnet50), display='block', block_col = "white", threshold=0.00005)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_dog_0170_resnet50), display='block', block_col = "white", threshold=0.04)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_dog_0170_resnet50), display='block', block_col = "white", threshold=0.02)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_dog_0170_resnet50), display='block', block_col = "white", threshold=0.015)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_dog_0170_resnet50), display='block', block_col = "white", threshold=0.01)
+```
+
+```{r}
+plot_image_explanation(to_df(expl_dog_0170_resnet50), display='block', block_col = "white", threshold=0.005)
+```
+
+```{r}
+expls_resnet <- c('flor_resnet_00005.png','flor_resnet_001.png','flor_resnet_0015.png','flor_resnet_002.png','flor_resnet_006.png',
+                'moto_resnet_001.png','moto_resnet_0015.png','moto_resnet_002.png',
+                'perro_resnet_004.png','perro_resnet_0005.png','perro_resnet_001.png','perro_resnet_0015.png','perro_resnet_002.png')
+
+for (expl in expls_resnet){
+  res <- predict(model_resnet50, image_prep(expl))
+  pred <- imagenet_decode_predictions(res)
+  print(expl)
+  print(pred)
+}
+```
+
+```{r}
+expls_vgg <- c('flor_vgg16_001.png','flor_vgg16_0015.png','flor_vgg16_002.png','flor_vgg16_003.png',
+                'moto_vgg16_001.png','moto_vgg16_0015.png','moto_vgg16_002.png',
+                'perro_vgg16_0005.png','perro_vgg16_001.png','perro_vgg16_0015.png','perro_vgg16_002.png','perro_vgg16_003.png')
+```
+
+```{r}
+for (expl in expls_vgg){
+  res <- predict(model_vgg16, image_prep(expl))
+  pred <- imagenet_decode_predictions(res)
+  print(expl)
+  print(pred)
+}
+```

@@ -1,0 +1,31 @@
+"0","library(keras)"
+"0","library(lime)   "
+"0","library(magick) "
+"2","Linking to ImageMagick 6.9.10.23
+Enabled features: fontconfig, freetype, fftw, lcms, pango, webp, x11
+Disabled features: cairo, ghostscript, heic, raw, rsvg
+"
+"2","Using 4 threads
+"
+"0","library(ggplot2)"
+"0","library(abind)"
+"0","library(dplyr)"
+"2","
+Attaching package: ‘dplyr’
+
+"
+"2","The following object is masked from ‘package:lime’:
+
+    explain
+
+"
+"2","The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+"
+"2","The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+"
