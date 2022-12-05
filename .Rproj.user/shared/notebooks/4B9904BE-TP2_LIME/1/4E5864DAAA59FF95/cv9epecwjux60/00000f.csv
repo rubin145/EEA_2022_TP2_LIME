@@ -1,0 +1,9 @@
+"0","#Clasificacion de la imagen segun el modelo VGG16"
+"0","res_vgg16_dog <- predict(model_vgg16, image_prep(c('dog_0170.jpg')))"
+"1","1/1 [==============================] - 1s 664ms/step
+"
+"1","1/1 [==============================] - 1s 664ms/step
+"
+"0","imagenet_decode_predictions(res_vgg16_dog)"
+"1","[[1]]
+"

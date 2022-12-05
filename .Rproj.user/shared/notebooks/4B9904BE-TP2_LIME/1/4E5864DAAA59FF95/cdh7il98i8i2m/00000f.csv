@@ -1,0 +1,7 @@
+"0","res_resnet50_flower <- predict(model_resnet50, image_prep(c('flower_0269.jpg')))"
+"1","1/1 [==============================] - 0s 457ms/step
+1/1 [==============================] - 0s 458ms/step
+"
+"0","imagenet_decode_predictions(res_resnet50_flower)"
+"1","[[1]]
+"

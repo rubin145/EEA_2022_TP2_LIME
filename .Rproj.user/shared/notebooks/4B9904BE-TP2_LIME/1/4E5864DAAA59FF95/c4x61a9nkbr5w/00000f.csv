@@ -1,0 +1,10 @@
+"0","expl_flower_0269[1,]"
+"1","[1m[33mError[39m in [38;5;232m`FUN()`[39m:[22m
+[33m![39m `x` must be a vector, not a <superpixel_list> object.
+Backtrace:
+[90m 1. [39mexpl_flower_0269[1, ]
+[90m 2. [39m[1mtibble[22m:::`[.tbl_df`(expl_flower_0269, 1, )
+[90m 3. [39mtibble:::tbl_subset_row(xo, i = i, i_arg)
+[90m 4. [39m[1mbase[22m::lapply(unclass(x), vec_slice, i = i)
+[90m 5. [39m[1mvctrs[22m (local) [38;5;232m[1m[94mFUN([38;5;232m[22m[39mX[[i]], ...[38;5;232m[1m[94m)[38;5;232m[22m[39m
+"

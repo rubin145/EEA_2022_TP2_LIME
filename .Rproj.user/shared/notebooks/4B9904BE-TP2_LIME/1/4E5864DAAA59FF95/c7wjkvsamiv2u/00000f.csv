@@ -1,0 +1,2 @@
+"0","#Imagen original a clasificar"
+"0","print(image_read('motorbike_0032.jpg'))"

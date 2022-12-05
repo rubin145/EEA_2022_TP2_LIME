@@ -1,0 +1,2 @@
+"0","#Imagen original a clasificar"
+"0","plot(image_read('flower_0269.jpg'))"

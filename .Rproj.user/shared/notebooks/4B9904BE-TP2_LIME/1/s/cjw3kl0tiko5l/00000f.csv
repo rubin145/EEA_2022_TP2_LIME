@@ -1,0 +1,7 @@
+"0","# install.packages(""keras"")"
+"0","# install.packages(""lime"")"
+"0","# system('add-apt-repository -y ppa:cran/imagemagick')"
+"0","# system('apt-get update')"
+"0","# system(""apt-get install libmagick++-dev"")"
+"0","# install.packages(""magick"")"
+"0","# install.packages('abind')"

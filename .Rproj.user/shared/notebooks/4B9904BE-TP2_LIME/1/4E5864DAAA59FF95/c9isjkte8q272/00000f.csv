@@ -1,0 +1,3 @@
+"0","#Imagen original a clasificar"
+"0","plot(image_read('dog_0170.jpg'))"
+"0",""

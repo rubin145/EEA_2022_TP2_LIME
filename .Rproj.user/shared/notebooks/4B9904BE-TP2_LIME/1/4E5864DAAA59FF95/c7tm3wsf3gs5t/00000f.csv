@@ -1,0 +1,8 @@
+"0","res_vgg16_flower <- predict(model_vgg16, image_prep(c('flower_0269.jpg')))"
+"1","1/1 [==============================] - 1s 1s/step
+"
+"1","1/1 [==============================] - 1s 1s/step
+"
+"0","imagenet_decode_predictions(res_vgg16_flower)"
+"1","[[1]]
+"

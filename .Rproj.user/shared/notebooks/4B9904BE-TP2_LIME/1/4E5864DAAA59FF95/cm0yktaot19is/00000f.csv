@@ -1,0 +1,9 @@
+"0","#Clasificacion de la imagen segun el modelo VGG16"
+"0","res_vgg16_motorbike <- predict(model_vgg16, image_prep(c('motorbike_0032.jpg')))"
+"1","1/1 [==============================] - 0s 483ms/step
+"
+"1","1/1 [==============================] - 0s 483ms/step
+"
+"0","imagenet_decode_predictions(res_vgg16_motorbike)"
+"1","[[1]]
+"

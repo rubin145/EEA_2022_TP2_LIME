@@ -1,0 +1,2 @@
+"0","#Visualizamos los superpixels obtenidos de la imagen"
+"0","plot_superpixels('flower_0269.jpg', n_superpixels = 50, weight = 10)"

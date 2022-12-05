@@ -1,0 +1,2 @@
+"0","#Visualizamos los superpixels obtenidos de la imagen"
+"0","plot_superpixels('motorbike_0032.jpg', n_superpixels = 50, weight = 5)"
